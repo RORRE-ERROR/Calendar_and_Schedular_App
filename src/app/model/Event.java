@@ -1,7 +1,3 @@
-package app.model;
-
-import java.time.LocalDateTime;
-
 /**
  * Event
  * -----
@@ -13,86 +9,51 @@ import java.time.LocalDateTime;
  * - start date and time
  * - end date and time
  *
- * This class follows the principles of encapsulation by keeping all fields
- * private and providing public getter methods for access.
  *
- * Note:
  * This class does NOT contain any logic, file handling, or user
  * interaction code. It is purely a data holder.
  */
+
+package app.model;
+
+import java.time.LocalDateTime; // Date (yyyy-MM-dd) and Time (24 hour format, HH:mm)
+
 public class Event {
+    /* Variables storing core information of an event mirroring the header row of "data/event.csv" file */ 
 
-    // Unique identifier for the event
-    // Used to link this event with reminders, recurrence rules, and additional fields
-    private int eventId;
-
-    // Title or name of the event (e.g., "Exam", "Meeting")
+    private int eventId; // Unique identifier for an event which connects the event with reminder, recurrence rules and additional fields
     private String title;
-
-    // Optional description providing more details about the event
-    private String description;
-
-    // Date and time when the event starts
+    private String description; // Optional
     private LocalDateTime startDateTime;
-
-    // Date and time when the event ends
     private LocalDateTime endDateTime;
 
-    /*
-     * Constructor for creating an Event object.
-     * This constructor initializes all attributes of the Event object.
-     */
-    public Event(int eventId, String title, String description,
-                 LocalDateTime startDateTime, LocalDateTime endDateTime) {
-
-        // Assign the provided event ID to the object
+    /* Constructor is the only way to initialize and set an Event object */
+    public Event(int eventId, String title, String description, LocalDateTime starDateTime, LocalDateTime endDateTime){
         this.eventId = eventId;
-
-        // Assign the event title
         this.title = title;
-
-        // Assign the event description
         this.description = description;
-
-        // Assign the start date and time
-        this.startDateTime = startDateTime;
-
-        // Assign the end date and time
+        this.startDateTime = starDateTime;
         this.endDateTime = endDateTime;
     }
 
-    /*
-     * Returns the unique ID of the event.
-     */
-    public int getEventId() {
+    /* Getter Methods for retrieving the value of each instance variable as they are private following the rules of encapsulation */
+    public int getEventId(){
         return eventId;
     }
 
-    /*
-     * Returns the title of the event.
-     */
-    public String getTitle() {
+    public String getTitle(){
         return title;
     }
 
-    /*
-     * Returns the description of the event.
-     */
-    public String getDescription() {
+    public String getDescription(){
         return description;
     }
 
-    /*
-     * Returns the start date and time of the event.
-     */
-    public LocalDateTime getStartDateTime() {
+    public LocalDateTime getStartDateTime(){
         return startDateTime;
     }
 
-    /*
-     * Returns the end date and time of the event.
-     */
-    public LocalDateTime getEndDateTime() {
+    public LocalDateTime getEndDateTime(){
         return endDateTime;
     }
 }
