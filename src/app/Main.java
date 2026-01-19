@@ -1,5 +1,3 @@
-package app;
-
 /*
  * Main.java
  * ---------
@@ -10,27 +8,27 @@ package app;
  * - Handles user input via console
  * - Routes actions to services, utilities, and views
  *
- * IMPORTANT:
- * - This file contains ONLY comments added.
- * - No executable code has been changed.
  */
 
+package app;
 
 import app.model.Event;
 import app.model.RecurringEvent;
 import app.model.Reminder;
 import app.service.ReminderService;
-import app.util.BackupManager;
+import app.model.AdditionalEventFields;
+import app.view.CalendarView;
 import app.util.AdditionalFileHandler;
+import app.util.BackupManager;
 import app.util.EventFileHandler;
 import app.util.RecurringFileHandler;
 import app.util.ReminderFileHandler;
-import app.view.CalendarView;
-import app.model.AdditionalEventFields;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 import java.util.List;
+
 import java.util.Scanner;
 
 public class Main {
@@ -38,10 +36,8 @@ public class Main {
     private static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) {
-
         // Launch-time reminder notification
         showNextReminderAtLaunch();
-
 
         while (true) {
             showMenu();
@@ -69,11 +65,24 @@ public class Main {
                 default -> System.out.println("Invalid choice.");
             }
 
-            // Spacer between user responses
             System.out.println();
         }
     }
 
+    private static void showNextReminderAtLaunch() {
+        List<Event> events = EventFileHandler.readEvents();
+        List<RecurringEvent> recurringRules = RecurringFileHandler.readRecurringEvents();
+        List<Reminder> reminders = ReminderFileHandler.readReminders();
+
+        System.out.print("Notification: ");
+        System.out.println();
+        ReminderService.getNextUpcomingReminder(events, recurringRules, reminders, LocalDateTime.now()).ifPresent(info -> {
+                    String human = ReminderService.formatDuration(info.timeUntilNotify);
+                    System.out.println("Your next event is coming soon in " + human + ": " + info.event.getTitle());
+                });
+    }
+
+    // Main Menu
     private static void showMenu() {
         System.out.println("""
         \n==== Calendar App ====
@@ -85,6 +94,7 @@ public class Main {
         System.out.print("Choose: ");
     }
 
+    // Event Menu
     private static void eventMenu() {
         System.out.println("""
                 Event menu:
@@ -93,6 +103,7 @@ public class Main {
                 3. Delete event
                 4. Search events
                 5. Reminders
+                0. Return
                 """);
         int choice;
         try {
@@ -109,16 +120,19 @@ public class Main {
             case 3 -> deleteEvent();
             case 4 -> searchEvents();
             case 5 -> reminderMenu();
+            case 0 -> showMenu();
             default -> System.out.println("Invalid choice.");
         }
     }
 
+    // view menu
     private static void viewMenu() {
         System.out.println("""
                 View menu:
                 1. Day calendar
                 2. Week calendar
                 3. Month calendar
+                0. return
                 """);
         int choice;
         try {
@@ -133,10 +147,12 @@ public class Main {
             case 1 -> viewDay();
             case 2 -> viewWeek();
             case 3 -> viewMonth();
+            case 0 -> showMenu();
             default -> System.out.println("Invalid choice.");
         }
     }
 
+    // Day View
     private static void viewDay() {
         LocalDate date;
         try {
@@ -151,11 +167,49 @@ public class Main {
         CalendarView.showDayView(events, date);
     }
 
+    // Month View
+    private static void viewMonth() {
+
+        int year;
+        int month;
+        try {
+            System.out.print("Year: ");
+            year = Integer.parseInt(sc.nextLine());
+
+            System.out.print("Month (1-12): ");
+            month = Integer.parseInt(sc.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid year/month.");
+            return;
+        }
+
+        List<Event> events = EventFileHandler.readEvents();
+        CalendarView.showMonthView(events, year, month);
+    }
+
+    // Week view
+    private static void viewWeek() {
+
+        LocalDate start;
+        try {
+            System.out.print("Week start date (yyyy-MM-dd): ");
+            start = LocalDate.parse(sc.nextLine());
+        } catch (Exception e) {
+            System.out.println("Invalid date format. Please use yyyy-MM-dd (example: 2026-01-06)");
+            return;
+        }
+
+        List<Event> events = EventFileHandler.readEvents();
+        CalendarView.showWeekView(events, start);
+    }
+
+    // Backup Menu
     private static void backupMenu() {
         System.out.println("""
                 Backup menu:
                 1. Backup
                 2. Restore
+                0. Return
                 """);
         int choice;
         try {
@@ -169,28 +223,19 @@ public class Main {
         switch (choice) {
             case 1 -> BackupManager.backup("backup.txt");
             case 2 -> BackupManager.restore("backup.txt");
+            case 0 -> showMenu();
             default -> System.out.println("Invalid choice.");
         }
     }
 
-    private static void showNextReminderAtLaunch() {
-        List<Event> events = EventFileHandler.readEvents();
-        List<RecurringEvent> recurringRules = RecurringFileHandler.readRecurringEvents();
-        List<Reminder> reminders = ReminderFileHandler.readReminders();
-
-        ReminderService.getNextUpcomingReminder(events, recurringRules, reminders, LocalDateTime.now())
-                .ifPresent(info -> {
-                    String human = ReminderService.formatDuration(info.timeUntilNotify);
-                    System.out.println("Your next event is coming soon in " + human + ": " + info.event.getTitle());
-                });
-    }
-
+    // Reminder Menu
     private static void reminderMenu() {
         System.out.println("""
                 Reminder options:
                 1. Add reminder
                 2. Update reminder
                 3. Delete reminder
+                0. Return
                 """);
 
         int choice;
@@ -206,6 +251,7 @@ public class Main {
             case 1 -> addReminder(false);
             case 2 -> addReminder(true);
             case 3 -> deleteReminder();
+            case 0 -> eventMenu();
             default -> System.out.println("Invalid choice.");
         }
     }
@@ -299,7 +345,7 @@ public class Main {
         for (RecurringEvent r : recurring) {
             Integer newId = idMap.get(r.getEventId());
             if (newId != null) {
-                newRecurring.add(new RecurringEvent(newId, r.getInterval(), r.getRecurrentTimes(), r.getRecurrentEndDate()));
+                newRecurring.add(new RecurringEvent(newId, r.getRecurrentInterval(), r.getRecurrentTimes(), r.getRecurrentEndDate()));
             }
         }
         RecurringFileHandler.writeRecurringEvents(newRecurring);
@@ -331,14 +377,14 @@ public class Main {
     private static void addEvent() {
 
         List<Event> events = EventFileHandler.readEvents();
-        int id = EventFileHandler.getNextEventId(events);
+        int id = EventFileHandler.nextEventId(events);
 
         System.out.print("Title: ");
         String title = sc.nextLine();
 
-    System.out.print("Description (optional, press Enter to skip): ");
-    String descInput = sc.nextLine();
-    String desc = descInput.isBlank() ? "" : descInput;
+        System.out.print("Description (optional, press Enter to skip): ");
+        String descInput = sc.nextLine();
+        String desc = descInput.isBlank() ? "" : descInput;
 
         LocalDateTime start;
         LocalDateTime end;
@@ -361,14 +407,14 @@ public class Main {
         Event e = new Event(id, title, desc, start, end);
 
         if (EventFileHandler.hasConflict(e)) {
-            System.out.println("Time conflict detected. Event not added.");
+            System.out.println("Time conflict detected with " + e.getTitle() +". Event not added.");
             return;
         }
 
         events.add(e);
         EventFileHandler.writeEvents(events);
 
-        // Additional fields (stored separately for marking purposes)
+        // Additional fields
         System.out.print("Location (optional): ");
         String location = sc.nextLine();
 
@@ -381,11 +427,11 @@ public class Main {
         maybeAddReminderForEvent(id);
 
         // Optional: add recurring settings immediately after creating the event
-    System.out.print("Is this event recurring? (y/n): ");
-    String recurringAnswer = sc.nextLine().trim().toLowerCase();
+        System.out.print("Is this event recurring? (y/n): ");
+        String recurringAnswer = sc.nextLine().trim().toLowerCase();
         if (recurringAnswer.equals("y") || recurringAnswer.equals("yes")) {
 
-            System.out.print("Interval (1d / 1w / 1m / 1y): ");
+            System.out.print("Interval (ex: 1d / 1w / 1m / 1y): ");
             String interval = sc.nextLine().trim();
 
             System.out.println("""
@@ -398,7 +444,7 @@ public class Main {
                 choice = Integer.parseInt(sc.nextLine());
             } catch (NumberFormatException nfeChoice) {
                 System.out.println("Invalid choice. Event was added as non-recurring.");
-                System.out.println("Event added with ID " + id);
+                System.out.println("Event added!");
                 return;
             }
 
@@ -411,7 +457,7 @@ public class Main {
                     endDate = LocalDate.parse(sc.nextLine());
                 } catch (Exception parseEndDateEx) {
                     System.out.println("Invalid date format. Event was added as non-recurring.");
-                    System.out.println("Event added with ID " + id);
+                    System.out.println("Event added!");
                     return;
                 }
             } else if (choice == 2) {
@@ -420,12 +466,12 @@ public class Main {
                     times = Integer.parseInt(sc.nextLine());
                 } catch (NumberFormatException nfeTimes) {
                     System.out.println("Invalid number. Event was added as non-recurring.");
-                    System.out.println("Event added with ID " + id);
+                    System.out.println("Event added!");
                     return;
                 }
             } else {
                 System.out.println("Invalid choice. Event was added as non-recurring.");
-                System.out.println("Event added with ID " + id);
+                System.out.println("Event added!");
                 return;
             }
 
@@ -435,11 +481,11 @@ public class Main {
             list.add(new RecurringEvent(id, interval, times, endDate));
             RecurringFileHandler.writeRecurringEvents(list);
 
-            System.out.println("Event added with ID " + id + " (recurring)");
+            System.out.println("Event added (recurring)!");
             return;
         }
 
-        System.out.println("Event added with ID " + id);
+        System.out.println("Event added!");
     }
 
     private static void maybeAddReminderForEvent(int eventId) {
@@ -538,7 +584,7 @@ public class Main {
             }
 
             // Recurrence: allow optional change/remove/keep
-            RecurringEvent existingRec = RecurringFileHandler.findByEventId(id);
+            RecurringEvent existingRec = RecurringFileHandler.searchByEventId(id);
             handleRecurringUpdate(id, existingRec);
 
             // Reminder: optional keep/change/remove
@@ -548,7 +594,7 @@ public class Main {
     }
 
     private static void handleRecurringUpdate(int eventId, RecurringEvent existingRec) {
-        String existingLabel = existingRec == null ? "none" : (existingRec.getInterval() + (existingRec.getRecurrentEndDate() != null ? ", until " + existingRec.getRecurrentEndDate() : ", times=" + existingRec.getRecurrentTimes()));
+        String existingLabel = existingRec == null ? "none" : (existingRec.getRecurrentInterval() + (existingRec.getRecurrentEndDate() != null ? ", until " + existingRec.getRecurrentEndDate() : ", times=" + existingRec.getRecurrentTimes()));
         System.out.print("Recurring settings (current: " + existingLabel + ") — press Enter to keep, type 'change' to edit, or 'remove' to delete: ");
         String ans = sc.nextLine().trim().toLowerCase();
 
@@ -591,7 +637,7 @@ public class Main {
 
     private static RecurringEvent promptRecurringSettings(int eventId) {
         try {
-            System.out.print("Interval (1d / 1w / 1m / 1y): ");
+            System.out.print("Interval (ex: 1d / 1w / 1m / 1y): ");
             String interval = sc.nextLine().trim();
 
             System.out.println("""
@@ -692,41 +738,6 @@ public class Main {
         }
     }
 
-    // ================= VIEW MONTH =================
-    private static void viewMonth() {
-
-        int year;
-        int month;
-        try {
-            System.out.print("Year: ");
-            year = Integer.parseInt(sc.nextLine());
-
-            System.out.print("Month (1-12): ");
-            month = Integer.parseInt(sc.nextLine());
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid year/month.");
-            return;
-        }
-
-        List<Event> events = EventFileHandler.readEvents();
-        CalendarView.showMonthView(events, year, month);
-    }
-
-    // ================= VIEW WEEK =================
-    private static void viewWeek() {
-
-        LocalDate start;
-        try {
-            System.out.print("Week start date (yyyy-MM-dd): ");
-            start = LocalDate.parse(sc.nextLine());
-        } catch (Exception e) {
-            System.out.println("Invalid date format. Please use yyyy-MM-dd (example: 2026-01-06)");
-            return;
-        }
-
-        List<Event> events = EventFileHandler.readEvents();
-        CalendarView.showWeekView(events, start);
-    }
 
     // ================= SEARCH =================
     private static void searchEvents() {
@@ -846,7 +857,7 @@ public class Main {
 
     // ================= EVENT PICKER =================
     /*
-    * Resolve an eventId based on user preference: Title or Date.
+     * Resolve an eventId based on user preference: Title or Date.
      * Returns null if the user cancels or no matching event is found.
      */
     private static Integer resolveEventId(List<Event> events, String action) {
