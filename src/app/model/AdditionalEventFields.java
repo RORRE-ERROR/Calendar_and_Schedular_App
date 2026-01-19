@@ -1,5 +1,3 @@
-package app.model;
-
 /*
  * AdditionalEventFields
  * --------------------
@@ -12,58 +10,36 @@ package app.model;
  * - category of the event
  *
  * These fields are optional and may not exist for every event.
- * This is a model class and does not contain any business logic or file handling.
+ * This is a model class and does not contain any logic or file handling.
  */
+
+package app.model;
+
 public class AdditionalEventFields {
+        /* Variables storing additional information of an event linked with eventID mirroring the header row of "data/additional.csv" file */
 
-    // The ID of the event that these additional fields belong to
-    // This acts as a link (foreign key) to the Event class
-    private final int eventId;
+        private int eventId; // Acts as a link to the Event class
 
-    // Location where the event takes place (e.g., "Lecture Hall A", "Online")
-    // This value may be null if the user does not provide a location
-    private final String location;
+        private String location; // Optional, null if unused, which is written as empty string in the csv file
+        private String category; // Optional, null if unused, which is written as empty string in the csv file
 
-    // Category used to group or classify events (e.g., "Study", "Work", "Personal")
-    // This value may be null if the user does not provide a category
-    private final String category;
+        /* Constructor is the only way to initialize and set an AdditionalEventFields object */
+        public AdditionalEventFields(int eventId, String location, String category){
+            this.eventId = eventId; 
+            this.location = location;
+            this.category = category;
+        }
 
-    /*
-     * Constructor for creating an AdditionalEventFields object.
-     *
-     * Once created, the values of this object cannot be changed,
-     * making it immutable and safe to use throughout the application.
-     */
-    public AdditionalEventFields(int eventId, String location, String category) {
+        /* Getter Methods for retrieving the value of each instance variable as they are private following the rules of encapsulation */
+        public int getEventId(){
+            return eventId;
+        }
 
-        // Assign the associated event ID
-        this.eventId = eventId;
+        public String getLocation(){
+            return location;
+        }
 
-        // Assign the location of the event
-        this.location = location;
-
-        // Assign the category of the event
-        this.category = category;
-    }
-
-    /*
-     * Returns the ID of the event associated with these additional fields.
-     */
-    public int getEventId() {
-        return eventId;
-    }
-
-    /*
-     * Returns the location of the event.
-     */
-    public String getLocation() {
-        return location;
-    }
-
-    /*
-     * Returns the category of the event.
-     */
-    public String getCategory() {
-        return category;
-    }
+        public String getCategory(){
+            return category;
+        }
 }
