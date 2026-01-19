@@ -1,13 +1,3 @@
-package app.util;
-
-import app.model.Event;
-
-import java.io.*;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 /*
  * EventFileHandler
  * ----------------
@@ -15,104 +5,50 @@ import java.util.List;
  * related to Event objects.
  *
  * It provides methods to:
- * - read events from a CSV file
  * - write events to a CSV file
- * - update and delete events
  * - generate unique event IDs
+ * - read events from a CSV file
+ * - update and delete events
  * - detect time conflicts between events
  * - search events by date or date range
  *
  * This class separates persistence logic from core logic,
- * following good software design principles.
  */
+
+package app.util;
+
+import app.model.Event;
+
+import java.util.List; // List is a collection interface
+import java.util.ArrayList; // ArrayList is mutable and expansible arrays implementing List interface
+
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+
+import java.io.PrintWriter; // PrintWriter class offers high-level methods for writing formatted data 
+import java.io.FileWriter; // FileWriter is a basic class for writing raw character streams to a file
+import java.io.BufferedReader; // BufferedReader class provides efficient, buffered reading by wrapping an existing Reader  
+import java.io.FileReader; // FileReader is a basic class for reading characters directly from a file
+import java.io.IOException;
+
 public class EventFileHandler {
-
     // File path where event data is stored
-    private static final String FILE_PATH = "data/event.csv";
-
-    /*
-     * Reads all events from the CSV file and returns them as a list.
-     */
-    public static List<Event> readEvents() {
-
-        // List to store all events read from the file
-        List<Event> events = new ArrayList<>();
-
-        // Try-with-resources ensures the file is closed automatically
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
-
-            // Read and ignore the header line
-            String line = br.readLine(); // skip header
-
-            // Read the file line by line
-            while ((line = br.readLine()) != null) {
-
-                // Skip empty lines to avoid parsing errors
-                if (line.trim().isEmpty()) {
-                    continue;
-                }
-
-                // Split the CSV line into individual fields. Be defensive: descriptions may contain commas,
-                // so we support lines with more than 5 parts by treating the last two columns as
-                // startDateTime and endDateTime and joining any in-between parts back into the description.
-                String[] parts = line.split(",");
-
-                if (parts.length < 5) {
-                    // Malformed row: skip it but warn so the user can inspect the data file.
-                    System.out.println("Skipping malformed event row: '" + line + "'");
-                    continue;
-                }
-
-                // Parse event data from CSV fields. Support extra commas inside the description field.
-                int id = Integer.parseInt(parts[0].trim());
-                String title = parts[1].trim();
-
-                // Reconstruct description which may include commas
-                StringBuilder descBuilder = new StringBuilder();
-                for (int i = 2; i < parts.length - 2; i++) {
-                    if (i > 2) descBuilder.append(',');
-                    descBuilder.append(parts[i]);
-                }
-                String desc = descBuilder.toString().trim();
-
-                LocalDateTime start = LocalDateTime.parse(parts[parts.length - 2].trim());
-                LocalDateTime end = LocalDateTime.parse(parts[parts.length - 1].trim());
-
-                // Create a new Event object and add it to the list
-                events.add(new Event(id, title, desc, start, end));
-            }
-
-        } catch (IOException e) {
-            // If the file does not exist, start with an empty event list
-            System.out.println("File not found, starting fresh.");
-        }
-
-        return events;
-    }
+    public static final String FILE_PATH = "data/event.csv";
 
     /*
      * Writes all events to the CSV file.
      */
-    public static void writeEvents(List<Event> events) {
-
-        try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
-
+    public static void writeEvents(List<Event> events){
+        // Try-with-resources ensures the file is closed automatically
+        try(PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))){
             // Write CSV header
             pw.println("eventId,title,description,startDateTime,endDateTime");
-
             // Write each event as a CSV row
-            for (Event e : events) {
-                pw.println(
-                    e.getEventId() + "," +
-                    e.getTitle() + "," +
-                    e.getDescription() + "," +
-                    e.getStartDateTime() + "," +
-                    e.getEndDateTime()
-                );
+            for(Event e : events){
+                pw.println(e.getEventId() + "," + e.getTitle() + "," + e.getDescription() + "," + e.getStartDateTime() + "," + e.getEndDateTime());
             }
-
-        } catch (IOException e) {
-            // Print stack trace for debugging purposes
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
     }
@@ -120,41 +56,85 @@ public class EventFileHandler {
     /*
      * Generates the next available event ID.
      */
-    public static int getNextEventId(List<Event> events) {
-
+    public static int nextEventId(List<Event> events){
         int max = 0;
 
-        // Find the maximum existing event ID
-        for (Event e : events) {
-            if (e.getEventId() > max) {
+        for(Event e : events){
+            if(e.getEventId() > max){
                 max = e.getEventId();
             }
         }
 
-        // Return the next ID
         return max + 1;
+    }
+
+    /*
+     * Reads all events from the CSV file and returns them as a list.
+     */
+    public static List<Event> readEvents(){
+        // List to store all events read from the file
+        List<Event> events = new ArrayList<Event>();
+
+        // Try-with-resources ensures the file is closed automatically
+        try(BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))){
+            // Read and ignore the header line
+            String line = br.readLine();
+
+            // Read the file line by line
+            while((line = br.readLine()) != null){
+                if(line.trim().isEmpty()){
+                    continue;
+                }
+
+            // Parsing each line containing String
+            String[] parts = line.split(",");
+
+            int eventId = Integer.parseInt(parts[0].trim());
+            String title = parts[1].trim();
+
+            StringBuilder descBuilder = new StringBuilder();
+            for(int i = 2; i < (parts.length - 2); i++){
+                if(i > 2){
+                    descBuilder.append(",");
+                }
+                descBuilder.append(parts[i]);
+            }
+
+            String description = descBuilder.toString().trim();
+
+            LocalDateTime starDateTime = LocalDateTime.parse(parts[parts.length - 2].trim());
+            LocalDateTime endDateTime = LocalDateTime.parse(parts[parts.length - 1].trim());
+
+            // Create a new Event object and add it to the list
+            events.add(new Event(eventId, title, description, starDateTime, endDateTime));
+            }
+        }
+        catch(IOException e){
+            System.out.println("File not found!");
+        }
+
+        return events;
     }
 
     /*
      * Updates an existing event in the CSV file.
      */
-    public static boolean updateEvent(Event updatedEvent) {
-
+    public static boolean updateEvent(Event updatedEvent){
         List<Event> events = readEvents();
         boolean found = false;
 
-        // Search for the event with the matching ID
-        for (int i = 0; i < events.size(); i++) {
-            if (events.get(i).getEventId() == updatedEvent.getEventId()) {
-                // Replace the old event with the updated event
-                events.set(i, updatedEvent);
+        // Search for the event with matching Id
+        for(int i = 0; i < events.size(); i++){
+            if(events.get(i).getEventId() == updatedEvent.getEventId()){
+                // Replace the event
+                events.set(i,updatedEvent);
                 found = true;
                 break;
             }
         }
 
-        // Save changes only if the event was found
-        if (found) {
+        // Save changes if updated
+        if(found){
             writeEvents(events);
         }
 
@@ -164,15 +144,14 @@ public class EventFileHandler {
     /*
      * Deletes an event from the CSV file using its event ID.
      */
-    public static boolean deleteEvent(int eventId) {
-
+    public static boolean deleteEvent(int eventId){
         List<Event> events = readEvents();
 
         // Remove the event with the matching ID
-        boolean removed = events.removeIf(e -> e.getEventId() == eventId);
+        boolean removed = events.removeIf(e -> e.getEventId() == eventId );
 
-        // Save changes if an event was removed
-        if (removed) {
+        // Save changes if removed
+        if(removed){
             writeEvents(events);
         }
 
@@ -182,85 +161,63 @@ public class EventFileHandler {
     /*
      * Checks whether a new or updated event conflicts with existing events.
      */
-    public static boolean hasConflict(Event newEvent) {
-
+    public static boolean hasConflict(Event newEvent){
         List<Event> events = readEvents();
 
-        // Normalize the new event time window
         LocalDateTime newStart = newEvent.getStartDateTime();
         LocalDateTime newEnd = newEvent.getEndDateTime();
 
-        // Swap times if end is before start (defensive check)
-        if (newEnd.isBefore(newStart)) {
-            LocalDateTime tmp = newStart;
-            newStart = newEnd;
-            newEnd = tmp;
-        }
-
-        // Compare the new event against all existing events
-        for (Event e : events) {
-
-            // Skip comparing the same event (important during updates)
-            if (e.getEventId() == newEvent.getEventId()) {
+        // Skip comparing the same event (important during updates)
+        for(Event e : events){
+            if(e.getEventId() == newEvent.getEventId()){
                 continue;
             }
 
             LocalDateTime existingStart = e.getStartDateTime();
             LocalDateTime existingEnd = e.getEndDateTime();
 
-            // Normalize existing event times if necessary
-            if (existingEnd.isBefore(existingStart)) {
-                LocalDateTime tmp = existingStart;
-                existingStart = existingEnd;
-                existingEnd = tmp;
-            }
-
             // Check for overlapping time intervals
-            boolean overlap =
-                    newStart.isBefore(existingEnd) &&
-                    newEnd.isAfter(existingStart);
+            boolean overlap = newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart);
 
-            if (overlap) {
+            if(overlap){
                 return true;
             }
         }
-
         return false;
     }
 
     /*
      * Searches for events occurring on a specific date.
      */
-    public static List<Event> searchByDate(LocalDate date) {
-
+    public static List<Event> searchByDate(LocalDate date){
         List<Event> results = new ArrayList<>();
 
+        List<Event> events = readEvents();
+
         // Check each event's start date
-        for (Event e : readEvents()) {
-            if (e.getStartDateTime().toLocalDate().equals(date)) {
+        for(Event e : events){
+            if(e.getStartDateTime().toLocalDate().equals(date)){
                 results.add(e);
             }
         }
-
-        return results;
+        return results; 
     }
 
     /*
      * Searches for events within a date range (inclusive).
      */
-    public static List<Event> searchByDateRange(LocalDate start, LocalDate end) {
-
+    public static List<Event> searchByDateRange(LocalDate start, LocalDate end){
         List<Event> results = new ArrayList<>();
 
-        for (Event e : readEvents()) {
-            LocalDate eventDate = e.getStartDateTime().toLocalDate();
+        List<Event> events = readEvents();
 
-            // Check if the event date is within the given range
-            if (!eventDate.isBefore(start) && !eventDate.isAfter(end)) {
+        // Check if the event date is within the given range
+        for(Event e : events){
+            LocalDate eventDate = e.getStartDateTime().toLocalDate();
+            if(!eventDate.isAfter(end) && !eventDate.isBefore(start)){
                 results.add(e);
             }
         }
-
-        return results;
+        return results; 
     }
 }
